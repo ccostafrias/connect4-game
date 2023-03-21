@@ -10,21 +10,25 @@ const columnsBoard = 7
 const boardArray = new Array()
 let actualTeam = 'first'
 
-function createCells(element, classy) {
+function createCells(element, classy, firstime = false) {
     element.innerHTML = ''
 
     // Cria as células
     for (let r = 0; r < rowsBoard; r++) {
         for (let c = 0; c < columnsBoard; c++) {
-            
-            element.innerHTML += `<div class="${classy} ${isFill(r, c)}" data-cell-row="${r}" data-cell-col="${c}"></div>`
+            element.innerHTML += `<div class="${classy}${isFill(r, c)}" data-cell-row="${r}" data-cell-col="${c}"></div>`
         }
 
         function isFill(row, col) {
-            if (boardArray[row][col] === 'f') return 'first-team'
-            if (boardArray[row][col] === 's') return 'second-team'
+            if (boardArray[row][col] === 'f') return ' first-team'
+            if (boardArray[row][col] === 's') return ' second-team'
+
+            return ''
         }
+
     }
+    
+    if (firstime && checkWin(true)) board.classList.add('win')
 
     //Ajeita a grid para que fique do tamanho certo
     element.style.gridTemplateColumns = `repeat(${columnsBoard}, 1fr)`
@@ -37,9 +41,7 @@ function setArray(firstTime = false) {
     if (firstTime && localArray) {
         for (const row of localArray) {
             boardArray.push(row)
-        }
-
-        return
+        } return
     }
 
     //Cria a array onde haverá todas as informações
@@ -60,7 +62,7 @@ function clearArray() {
 
 setArray(true)
 createCells(board, 'cell')
-createCells(boardInv, 'cell-inv')
+createCells(boardInv, 'cell-inv', true)
 
 board.addEventListener('click', e => {
     if (e.target.classList.contains('cell') && !board.classList.contains('win')) handleCellClick(e)
@@ -81,15 +83,11 @@ function handleCellClick(e) {
     // Atualiza o valor dela para o 'f' ou 's' ('first' e 'second')
     boardArray[row][column] = actualTeam.charAt(0)
 
-    const backCell = getCell([...document.querySelectorAll('.cell-inv')])
-    const frontCell = getCell([...document.querySelectorAll('.cell')])
+    const backCell = getCell([...document.querySelectorAll('.cell-inv')], column, row)
+    const frontCell = getCell([...document.querySelectorAll('.cell')], column, row)
 
     backCell.classList.add(`${actualTeam}-team`)
     frontCell.classList.add('reveal')
-
-    function getCell(cells, c = column, r = row) {
-        return cells.find(cell => cell.dataset.cellCol == c && cell.dataset.cellRow == r)
-    }
 
     // Troca a vez
     actualTeam = actualTeam == 'first' ? 'second' : 'first'
@@ -99,7 +97,7 @@ function handleCellClick(e) {
     localStorage.setItem('board-connect4', JSON.stringify(boardArray))
 
     // Verifica se ganhou
-    if (checkBoard()) {
+    if (checkWin()) {
         board.classList.add('win')
         setTimeout(() => {
             startConfetti()
@@ -108,6 +106,10 @@ function handleCellClick(e) {
             }, 1000)
         }, 300);
     }
+}
+
+function getCell(cells, c, r) {
+    return cells.find(cell => cell.dataset.cellCol == c && cell.dataset.cellRow == r)
 }
 
 function flipTurn() {
@@ -142,7 +144,9 @@ function handleReset(e) {
                 setArray()
                 createCells(board, 'cell')
                 createCells(boardInv, 'cell-inv')
-        
+                
+                // Salva o estado atual do tabuleiro
+                localStorage.setItem('board-connect4', JSON.stringify(boardArray))
         
                 actualTeam = 'first'
                 turnCellF.classList.remove(`turn-back`)
@@ -154,7 +158,7 @@ function handleReset(e) {
 
         const filtered = column.filter((cell, index) => index % columnsBoard == newI)
 
-        while (isColumnEmpty(filtered)) {
+        if (isColumnEmpty(filtered)) {
             downBelow(column, newI)
             return
         }
@@ -165,42 +169,72 @@ function handleReset(e) {
             if (newI >= 0) downBelow(column, newI)
         }, 50)
     }
-
-    function isColumnEmpty(column){
-        column.map(cell => cell.classList.toString())
-            .every(classy => classy === "cell-inv")
-    }
 }
 
+function isColumnEmpty(column){
+    return column.map(cell => cell.classList.toString())
+        .every(classy => classy === "cell-inv")
+}
 
-function checkBoard() {
+function checkWin(firstime = false) {
     // Retorna a coluna de uma array bidimensional
     const arrayColumn = (arr, n) => arr.map(x => x[n])
 
+    const arrayFromBoard = new Array()
+    const cells = [...document.querySelectorAll('.cell-inv')] 
+
+    for (let r = 0; r < rowsBoard; r++) {
+        arrayFromBoard.push([])
+        for (let c = 0; c < columnsBoard; c++) {
+            arrayFromBoard[r].push(cells[0])
+            cells.shift()
+        }
+    }
+
     // Verifica se há quatro células iguais na linha
-    for (let row of boardArray) {
-        if (
-            hasConsecutive(row, 'f') ||
-            hasConsecutive(row, 's')
-        ) return true
+    for (let row of arrayFromBoard) {
+        const rowConsec = hasConsecutive(row)
+        if (rowConsec) { 
+            if (!firstime) setBlink(rowConsec)
+            return true
+        }
     }
 
     // Verifica se há quatro células iguais na coluna
     for (let i = 0; i < columnsBoard - 1; i++) {
-        if (
-            hasConsecutive(arrayColumn(boardArray, i), 'f') ||
-            hasConsecutive(arrayColumn(boardArray, i), 's')
-        ) return true
+        const column = arrayColumn(arrayFromBoard, i)
+        const columnConsec = hasConsecutive(column)
+        if (columnConsec) { 
+            if (!firstime) setBlink(columnConsec)
+            return true
+        }
     }
 
-    for (let diagonal of diagonals(boardArray)) {
-        if (
-            hasConsecutive(diagonal, 'f') ||
-            hasConsecutive(diagonal, 's')
-        ) return true
+    for (let diagonal of diagonals(arrayFromBoard)) {
+        const diagonalConsec = hasConsecutive(diagonal)
+        if (diagonalConsec) { 
+            if (!firstime) setBlink(diagonalConsec)
+            return true
+        }
     }
 
     return false
+}
+
+function boardToArray(arr) {
+    return arr.map(cell => {
+        if (cell.classList.contains('first-team')) return 'f'
+        if (cell.classList.contains('second-team')) return 's'
+        return 0
+    })
+} 
+
+function setBlink(cellsObj) {
+    setTimeout(() => {
+        const cells = cellsObj.consecutives
+        const team = cellsObj.char === 'f' ? 'first' : 'second'
+        cells.forEach(cell => cell.classList.add(`blink-${team}`))
+    }, 100);
 }
 
 function diagonals(matrix) {
@@ -267,29 +301,35 @@ function diagonals(matrix) {
     return result;
 }
 
-function hasConsecutive(arr, element, n = 4) {
+function hasConsecutive(arr, n = 4) {
     if (arr.length < n) {
         // Se a array tem menos de n elementos, não pode haver n elementos consecutivos iguais
         return false 
     }
 
     for (let i = 0; i <= arr.length - n; i++) {
-        if (arr[i] !== element) continue
+        let arrTrans = boardToArray(arr)
+        if (arrTrans[i] === 0) continue
 
         let hasConsecutive = true
+        let char = arrTrans[i]
+        let consecutives = new Array()
+        consecutives.push(arr[i])
 
         // Verifica se o próximo elemento é igual ao anterior
         for (let j = i + 1; j < i + n; j++) {
-            if (arr[j] !== arr[i]) {
+            if (arrTrans[j] !== arrTrans[i]) {
                 hasConsecutive = false
+                consecutives = []
                 break
             }
+            consecutives.push(arr[j])
         }
 
         if (hasConsecutive) {
-            return true
+            return {consecutives, char}
         }
     }
 
     return false
-}  
+}

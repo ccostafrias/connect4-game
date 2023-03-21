@@ -11,9 +11,9 @@
     --background-color: #90acb4;
     --background-darker: hsla(0, 0%, 100%, .4);
     --first-team: #e9c46a;
-    --first-team-darker: hsl(40, 40%, 50%);
+    --first-team-darker: hsl(40, 40%, 30%);
     --second-team: #e76f51;
-    --second-team-darker: hsl(12, 40%, 50%);
+    --second-team-darker: hsl(12, 40%, 30%);
 
     --cell-width: clamp(50px, 10vw, 60px);
 }
@@ -35,8 +35,7 @@ body{
 
 .highlight {
     font-size: 1.4em;
-    color: var(--second-team);
-    text-shadow: 2px 2px 0 rgba(0, 0, 0, .5);
+    text-shadow: .04em .04em 0 rgba(0, 0, 0, .5);
 }
 
 h1{
@@ -126,12 +125,12 @@ header {
 }
 
 .cell-inv.down-below {
-    transform: translateY(1000%);
+    transform: translateY(100vh);
     transition: transform .5s cubic-bezier(.56,-0.03,1,.84)
 }
 
 .cell-inv:not(.down-below) {
-    transform: translateY(-500%);
+    transform: translateY(-100vh);
     transition: transform .5s cubic-bezier(.83,1.56,0,.75);
 }
 
@@ -142,12 +141,10 @@ header {
 
 .first-team {
     background-color: var(--first-team);
-    /* box-shadow: inset 0 0 0 2px var(--first-team-darker); */
 }
 
 .second-team {
     background-color: var(--second-team);
-    /* box-shadow: inset 0 0 0 2px var(--second-team-darker); */
 }
 
 .cell {
@@ -197,8 +194,46 @@ header {
     }
 }
 
-.confetti-canvas {
+.canvas {
     position: absolute;
     top: 0;
-    left: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: none;
+    margin: auto;
+}
+
+.first-team-color { color: var(--first-team); }
+.second-team-color { color: var(--second-team); }
+
+/* Blink effect */
+
+@keyframes blinkSecond {
+    0% {
+      background-color: var(--second-team-darker);
+    }
+    100% {
+      background-color: var(--second-team);
+    }
+}
+
+@keyframes blinkFirst {
+    0% {
+      background-color: var(--first-team-darker);
+    }
+    100% {
+      background-color: var(--first-team);
+    }
+}
+
+.blink-second {
+    -webkit-animation: blinkSecond 0.5s 3;
+    -moz-animation: blinkSecond 0.5s 3;
+    animation: blinkSecond 0.5s 3;
+}
+
+.blink-first {
+    -webkit-animation: blinkFirst 0.5s 3;
+    -moz-animation: blinkFirst 0.5s 3;
+    animation: blinkFirst 0.5s 3;
 }
